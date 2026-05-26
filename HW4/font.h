@@ -6,7 +6,7 @@
 // void drawString(...);
 
 void drawChar(int x, int y, char c);
-void drawString(int x, int y, char *string);
+void drawMessage(int x, int y, char *message);
 
 // lookup table for all of the ascii characters
 static const char ASCII[96][5] = {

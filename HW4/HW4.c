@@ -11,14 +11,14 @@
 #define I2C_PORT i2c0
 #define I2C_SDA 16
 #define I2C_SCL 17
-#define HEARTBEAT_LED 
+#define HEARTBEAT_LED 25
 
 int main()
 {
     stdio_init_all();
 
-    // I2C Initialisation. Using it at 400Khz.
-    i2c_init(I2C_PORT, 400*1000);
+    // I2C Initialisation
+    i2c_init(I2C_PORT, 100*1000);
     
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
@@ -32,16 +32,76 @@ int main()
     bool heartbeat_state = false;
     absolute_time_t last_blink = get_absolute_time();
 
+    // ADC0 setup: ADC0 is GPIO26
+    adc_init();
+    adc_gpio_init(26);
+    adc_select_input(0);
+
+    // OLED setup
+    ssd1306_setup();
+
     while (true) {
-        // Heartbeat blink every 500 ms (copied over from HW3)
-        if (absolute_time_diff_us(last_blink, get_absolute_time()) > 500000) {
-            heartbeat_state = !heartbeat_state;
-            gpio_put(HEARTBEAT_LED, heartbeat_state);
-            last_blink = get_absolute_time();
+        ssd1306_clear();
+
+        for (int x = 0; x < 128; x++) {
+            for (int y = 0; y < 32; y++) {
+                ssd1306_drawPixel(x, y, 1);
+            }
         }
 
-        sleep_ms(1);
+        ssd1306_update();
+
+        gpio_put(HEARTBEAT_LED, 1);
+        sleep_ms(500);
+        gpio_put(HEARTBEAT_LED, 0);
+        sleep_ms(500);
     }
+
+    // while (true) {
+    //     // Heartbeat blink every 500 ms (copied over from HW3)
+    //     if (absolute_time_diff_us(last_blink, get_absolute_time()) > 500000) {
+    //         heartbeat_state = !heartbeat_state;
+    //         gpio_put(HEARTBEAT_LED, heartbeat_state);
+    //         last_blink = get_absolute_time();
+    //     }
+
+    //     // Read ADC0 and convert to voltage
+    //     uint16_t adc_raw = adc_read();
+    //     float voltage = adc_raw * 3.3f / 4095.0f;
+
+    //     // Clear display
+    //     ssd1306_clear();
+
+    //     // Blinking pixel
+    //     ssd1306_drawPixel(0, 0, heartbeat_state);
+
+    //     // Print ADC voltage
+    //     sprintf(line1, "ADC0 = %.2f V", voltage);
+    //     drawMessage(0, 8, line1);
+
+    //     // Estimate FPS
+    //     unsigned int before_update = to_us_since_boot(get_absolute_time());
+    //     ssd1306_update();
+    //     unsigned int after_update = to_us_since_boot(get_absolute_time());
+
+    //     float fps = 1000000.0f / (after_update - before_update);
+
+    //     // Redraw with FPS included
+    //     ssd1306_clear();
+    //     ssd1306_drawPixel(0, 0, heartbeat_state);
+
+    //     sprintf(line1, "ADC0 = %.2f V", voltage);
+    //     sprintf(line2, "FPS = %.1f", fps);
+
+    //     drawMessage(0, 8, line1);
+    //     drawMessage(0, 24, line2);
+
+    //     ssd1306_update();
+
+    //     sleep_ms(10);
+
+    // }
+
 }
 
 void drawChar(int x, int y, char c) {
@@ -61,13 +121,12 @@ void drawChar(int x, int y, char c) {
     }
 }
 
-void drawString(int x, int y, char *string) {
+void drawMessage(int x, int y, char *message) {
     int cursor_x = x;
 
-    while (*string != '\0') {
-        drawChar(cursor_x, y, *string);
+    while (*message != '\0') {
+        drawChar(cursor_x, y, *message);
         cursor_x += 6; // 5 pixels for letter + 1 pixel space
-        string++;
+        message++;
     }
 }
-

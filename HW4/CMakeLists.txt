@@ -48,7 +48,8 @@ pico_enable_stdio_usb(HW4 1)
 target_link_libraries(HW4
         pico_stdlib
         hardware_i2c
-        hardware_adc)
+        hardware_adc
+        )
 
 # Add the standard include files to the build
 target_include_directories(HW4 PRIVATE
@@ -57,8 +58,6 @@ target_include_directories(HW4 PRIVATE
 
 # Add any user requested libraries
 target_link_libraries(HW4 
-        ssd1306
-        font
         )
 
 pico_add_extra_outputs(HW4)

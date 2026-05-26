@@ -22,7 +22,7 @@ void ssd1306_setup() {
     ssd1306_command(SSD1306_SETMULTIPLEX);
     ssd1306_command(0x1F); // height-1 = 31
     ssd1306_command(SSD1306_SETDISPLAYOFFSET);
-    ssd1306_command(0x0);
+    ssd1306_command(0x00);
     ssd1306_command(SSD1306_SETSTARTLINE);
     ssd1306_command(SSD1306_CHARGEPUMP);
     ssd1306_command(0x14);
@@ -54,7 +54,7 @@ void ssd1306_command(unsigned char c) {
     uint8_t buf[2];
     buf[0] = 0x00;
     buf[1] =c;
-    i2c_write_blocking(i2c_default, SSD1306_ADDRESS, buf, 2, false);
+    i2c_write_blocking(i2c0, SSD1306_ADDRESS, buf, 2, false);
 }
 
 // update every pixel on the screen
@@ -79,7 +79,7 @@ void ssd1306_update() {
     i2c_master_stop();
     */
 
-    i2c_write_blocking(i2c_default, SSD1306_ADDRESS, ptr, 513, false);
+    i2c_write_blocking(i2c0, SSD1306_ADDRESS, ptr, 513, false);
 }
 
 // set a pixel value. Call update() to push to the display)
