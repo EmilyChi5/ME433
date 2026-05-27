@@ -97,6 +97,6 @@ void ssd1306_drawPixel(unsigned char x, unsigned char y, unsigned char color) {
 
 // zero every pixel value
 void ssd1306_clear() {
-    memset(ssd1306_buffer, 0, 512); // make every bit a 0, memset in string.h
+    memset(ssd1306_buffer, 0, 513); // make every bit a 0, memset in string.h
     ssd1306_buffer[0] = 0x40; // first byte is part of command
 }
