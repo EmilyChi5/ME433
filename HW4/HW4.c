@@ -42,23 +42,49 @@ int main()
     ssd1306_clear();
     ssd1306_update();
 
+    // Making space for the messages
+    char message1[50];
+    char message2[50];
+
     while (true)
     {
+        // Read ADC0 and convert to volts
+        uint16_t raw_adc = adc_read();
+        float voltage = raw_adc * 3.3f / 4095.0f;
+
+        // Clear display memory
         ssd1306_clear();
 
-        for (int x = 0; x < 128; x++) {
-            for (int y = 24; y < 32; y++) {
-                ssd1306_drawPixel(x, y, 1);
-            }
-        }
+        // Blink a pixel using same heartbeat state
+        ssd1306_drawPixel(0, 0, heartbeat_state);
+
+        // Write ADC voltage
+        sprintf(message1, "ADC0 = %.2f V", voltage);
+        drawMessage(0, 10, message1);
+
+        // FPS
+        unsigned int before_update = to_us_since_boot(get_absolute_time());
+        ssd1306_update();
+        unsigned int after_update = to_us_since_boot(get_absolute_time());
+
+        float fps = 1000000.0f / (after_update - before_update);
+
+        ssd1306_clear();
+        ssd1306_drawPixel(0, 0, heartbeat_state);
+
+        sprintf(message1, "ADC0 = %.2f V", voltage);
+        sprintf(message2, "FPS = %.1f", fps);
+
+        drawMessage(0, 10, message1);
+        drawMessage(0, 24, message2);
 
         ssd1306_update();
 
+        sleep_ms(10);
+
+        // Heartbeat LED
         gpio_put(HEARTBEAT_LED, 1);
         sleep_ms(500);
-
-        ssd1306_clear();
-        ssd1306_update();
 
         gpio_put(HEARTBEAT_LED, 0);
         sleep_ms(500);
