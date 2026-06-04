@@ -123,3 +123,4 @@ void drawMessage(int x, int y, char *message)
         message++;
     }
 }
+  
