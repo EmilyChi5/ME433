@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "hardware/adc.h"
@@ -10,6 +11,7 @@ void mpu_write(unsigned char reg, unsigned char value);
 unsigned char mpu_read(unsigned char reg);
 void mpu6050_init(void);
 void mpu_read_all(short *ax, short *ay, short *az, short *temp, short *gx, short *gy, short *gz);
+void drawLine(int x0, int y0, int x1, int y1);
 
 // I2C defines
 // This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
@@ -77,6 +79,11 @@ int main()
 
     mpu6050_init();
 
+    // Get ready to draw
+    ssd1306_setup();
+    ssd1306_clear();
+    ssd1306_update();
+
     while (true)
     {
         short ax, ay, az, temp, gx, gy, gz;
@@ -97,7 +104,25 @@ int main()
         printf("AX: %.2f AY: %.2f AZ: %.2f TEMP: %.2f GX: %.2f GY: %.2f GZ: %.2f\n",
                ax_g, ay_g, az_g, temp_c, gx_dps, gy_dps, gz_dps);
 
-        sleep_ms(100); // 100 Hz
+        // OLED center
+        int cx = 64;
+        int cy = 16;
+
+        // Convert acceleration into vector
+        int x2 = cx + (int)(ax_g * 30);
+        int y2 = cy - (int)(ay_g * 15);
+
+        // Draw vector
+        ssd1306_clear();
+
+        drawLine(cx, cy, x2, y2);
+
+        // Ceneter Point
+        ssd1306_drawPixel(cx, cy, 1);
+
+        ssd1306_update();
+
+        sleep_ms(10); // 100 Hz
     }
 }
 
@@ -132,6 +157,42 @@ void drawMessage(int x, int y, char *message)
         drawChar(cursor_x, y, *message);
         cursor_x += 6; // 5 pixels for letter + 1 pixel space
         message++;
+    }
+}
+
+// TO draw proportional lines
+void drawLine(int x0, int y0, int x1, int y1)
+{
+    int dx = abs(x1 - x0);
+    int sx = x0 < x1 ? 1 : -1;
+
+    int dy = -abs(y1 - y0);
+    int sy = y0 < y1 ? 1 : -1;
+
+    int err = dx + dy;
+
+    while (true)
+    {
+        ssd1306_drawPixel(x0, y0, 1);
+
+        if (x0 == x1 && y0 == y1)
+        {
+            break;
+        }
+
+        int e2 = 2 * err;
+
+        if (e2 >= dy)
+        {
+            err += dy;
+            x0 += sx;
+        }
+
+        if (e2 <= dx)
+        {
+            err += dx;
+            y0 += sy;
+        }
     }
 }
 
