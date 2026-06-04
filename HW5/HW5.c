@@ -9,6 +9,7 @@
 void mpu_write(unsigned char reg, unsigned char value);
 unsigned char mpu_read(unsigned char reg);
 void mpu6050_init(void);
+void mpu_read_all(short *ax, short *ay, short *az, short *temp, short *gx, short *gy, short *gz);
 
 // I2C defines
 // This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
@@ -34,24 +35,23 @@ void mpu6050_init(void);
 #define ACCEL_YOUT_L 0x3E
 #define ACCEL_ZOUT_H 0x3F
 #define ACCEL_ZOUT_L 0x40
-#define TEMP_OUT_H   0x41
-#define TEMP_OUT_L   0x42
-#define GYRO_XOUT_H  0x43
-#define GYRO_XOUT_L  0x44
-#define GYRO_YOUT_H  0x45
-#define GYRO_YOUT_L  0x46
-#define GYRO_ZOUT_H  0x47
-#define GYRO_ZOUT_L  0x48
-#define WHO_AM_I     0x75
-
+#define TEMP_OUT_H 0x41
+#define TEMP_OUT_L 0x42
+#define GYRO_XOUT_H 0x43
+#define GYRO_XOUT_L 0x44
+#define GYRO_YOUT_H 0x45
+#define GYRO_YOUT_L 0x46
+#define GYRO_ZOUT_H 0x47
+#define GYRO_ZOUT_L 0x48
+#define WHO_AM_I 0x75
 
 int main()
 {
     stdio_init_all();
 
     // I2C Initialisation. Using it at 400Khz.
-    i2c_init(I2C_PORT, 100*1000);
-    
+    i2c_init(I2C_PORT, 100 * 1000);
+
     gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C_SDA);
@@ -60,12 +60,14 @@ int main()
     // Heartbeat LED
     gpio_init(HEARTBEAT_LED);
     gpio_set_dir(HEARTBEAT_LED, GPIO_OUT);
-    
+
     // Checking WHO_AM_I register
     unsigned char who = mpu_read(WHO_AM_I);
 
-    if (who != 0x68 && who != 0x98) {
-        while (true) {
+    if (who != 0x68 && who != 0x98)
+    {
+        while (true)
+        {
             gpio_put(HEARTBEAT_LED, 1);
             sleep_ms(100);
             gpio_put(HEARTBEAT_LED, 0);
@@ -75,13 +77,27 @@ int main()
 
     mpu6050_init();
 
-    while (true) {
-        printf("MPU6050 connected!\n");
+    while (true)
+    {
+        short ax, ay, az, temp, gx, gy, gz;
 
-        gpio_put(HEARTBEAT_LED, 1);
-        sleep_ms(500);
-        gpio_put(HEARTBEAT_LED, 0);
-        sleep_ms(500);
+        mpu_read_all(&ax, &ay, &az, &temp, &gx, &gy, &gz);
+
+        float ax_g = ax * 0.000061f;
+        float ay_g = ay * 0.000061f;
+        float az_g = az * 0.000061f;
+
+        float temp_c = temp / 340.0f + 36.53f;
+
+        float gx_dps = gx * 0.007630f;
+        float gy_dps = gy * 0.007630f;
+        float gz_dps = gz * 0.007630f;
+
+        // Printing all the data
+        printf("AX: %.2f AY: %.2f AZ: %.2f TEMP: %.2f GX: %.2f GY: %.2f GZ: %.2f\n",
+               ax_g, ay_g, az_g, temp_c, gx_dps, gy_dps, gz_dps);
+
+        sleep_ms(100); // 100 Hz
     }
 }
 
@@ -119,7 +135,8 @@ void drawMessage(int x, int y, char *message)
     }
 }
 
-void mpu_write(unsigned char reg, unsigned char value) {
+void mpu_write(unsigned char reg, unsigned char value)
+{
     unsigned char buf[2];
     buf[0] = reg;
     buf[1] = value;
@@ -127,7 +144,8 @@ void mpu_write(unsigned char reg, unsigned char value) {
 }
 
 // Read IMU
-unsigned char mpu_read(unsigned char reg) {
+unsigned char mpu_read(unsigned char reg)
+{
     unsigned char value;
     i2c_write_blocking(i2c0, MPU_ADDR, &reg, 1, true);
     i2c_read_blocking(i2c0, MPU_ADDR, &value, 1, false);
@@ -135,8 +153,27 @@ unsigned char mpu_read(unsigned char reg) {
 }
 
 // To initalize IMU
-void mpu6050_init() {
-    mpu_write(PWR_MGMT_1, 0x00);    
-    mpu_write(ACCEL_CONFIG, 0x00);  // +/- 2g
-    mpu_write(GYRO_CONFIG, 0x18);   // +/- 2000 dps
+void mpu6050_init()
+{
+    mpu_write(PWR_MGMT_1, 0x00);
+    mpu_write(ACCEL_CONFIG, 0x00); // +/- 2g
+    mpu_write(GYRO_CONFIG, 0x18);  // +/- 2000 dps
+}
+
+// Nusrt Read
+void mpu_read_all(short *ax, short *ay, short *az, short *temp, short *gx, short *gy, short *gz)
+{
+    unsigned char reg = ACCEL_XOUT_H;
+    unsigned char data[14];
+
+    i2c_write_blocking(i2c0, MPU_ADDR, &reg, 1, true);
+    i2c_read_blocking(i2c0, MPU_ADDR, data, 14, false);
+
+    *ax = (data[0] << 8) | data[1];
+    *ay = (data[2] << 8) | data[3];
+    *az = (data[4] << 8) | data[5];
+    *temp = (data[6] << 8) | data[7];
+    *gx = (data[8] << 8) | data[9];
+    *gy = (data[10] << 8) | data[11];
+    *gz = (data[12] << 8) | data[13];
 }
