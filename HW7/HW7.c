@@ -14,6 +14,7 @@
 
 static inline void cs_select(uint cs_pin);
 static inline void cs_deselect(uint cs_pin);
+void writeDAC(int channel, float V);
 
 int main()
 {
@@ -21,48 +22,65 @@ int main()
 
     // Initalizing SPI Pins
     spi_init(spi_default, 1000 * 1000); // the baud, or bits per second
-    gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI);
+    // gpio_set_function(PICO_DEFAULT_SPI_RX_PIN, GPIO_FUNC_SPI); (I don't think I need this)
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_TX, GPIO_FUNC_SPI);
 
-    cs_select(PIN_CS);
-    spi_write_blocking(SPI_PORT, data, len); // where data is a uint8_t array with length len
-    cs_deselect(PIN_CS);
+    gpio_init(PIN_CS);
+    gpio_set_dir(PIN_CS, GPIO_OUT);
+    gpio_put(PIN_CS, 1);
 
-    float v[100];
-    for (i = 0; i < 100; i++) {
-        v[i] = sine(i)
-    }
+    float t = 0.0f;
+
 
     while (true)
     {
-        // call writeDAC
-        float t = 0;
-        t = t + .01;
-        float voltage = (sine(2*PI*2*t)+1)/2*3.3
-        writeDAC(channel, voltage)
-        sleep_ms(10);
+        // Making waves ranging from 0V to 3.3V
+        // Basic Sine Wave
+        float sine_voltage = (sinf(2.0f * PI * 2.0f *t) + 1.0f) / 2.0f * 3.3f;
+
+        float triangle_voltage;
+        float phase = fmodf(t, 1.0f);
+
+        if (phase < 0.5f) {
+            triangle_voltage = phase * 2.0f *3.3f;
+        } else {
+            triangle_voltage = (1.0f - phase) * 2.0f *3.3f;
+        }
+
+        writeDAC(0, sine_voltage); // Channel A
+        writeDAC(1, triangle_voltage); // Channel B
+
+        sleep_ms(5); // 200 Hz
+        t += 0.0005f;
+
     }
 }
 
-void writeDAC(int channel, float v){
+void writeDAC(int channel, float V){
+
+    if (V < 0.0f) {
+        V = 0.0f;
+    }
+
+    if (V > 3.3f) {
+        V > 3.3f;
+    }
+
+    uint16_t myV = (uint16_t)(V / 3.3f * 1023.0f);
+
+    uint16_t command = 0;
+
+    command |= (channel & 0b1) << 15; // channel A=0, B=1
+    command |= 0b111 << 12;           // buffer=1, gain=1x, active=1
+    command |= myV << 2;              // 10-bit value
 
     uint8_t data[2];
-
-    data[0] = 0b01110000;
-
-    data[0] = data[0] | ((channel&0b1)<<7) // put the channel bit in
-
-    uint16_t myV = v/3.3*1023;
-
-    data[0] = data[0] | ((myV >> 6)&0b00001111)
-
-    data[1] = (myV<<2)& 0xFF //0b11111100
-
-    data[1] = 0b11111100;
+    data[0] = command >> 8;
+    data[1] = command & 0xFF;
 
     cs_select(PIN_CS);
-    spi_write_blocking(SPI_PORT, data, len); // where data is a uint8_t array with length len
+    spi_write_blocking(SPI_PORT, data, 2); // where data is a uint8_t array with length len
     cs_deselect(PIN_CS);
 }
 
