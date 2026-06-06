@@ -2,29 +2,56 @@ import matplotlib.pyplot as plt
 import numpy as np
 import csv
 
-t = [] # column 0
-data = [] # column 1
+def read_csv(filename):
+    t = [] # column 0
+    data = [] # column 1
 
-with open('sigA.csv') as f:
-    # open the csv file
-    reader = csv.reader(f)
-    for row in reader:
-        # read the rows 1 one by one
-        t.append(float(row[0])) # leftmost column
-        data.append(float(row[1])) # second column
+    with open(filename) as f:
+        # open the csv file
+        reader = csv.reader(f)
+        for row in reader:
+            # read the rows 1 one by one
+            t.append(float(row[0])) # leftmost column
+            data.append(float(row[1])) # second column
 
-for i in range(len(t)):
-    # print the data to verify it was read
-    print(str(t[i]) + ", " + str(data[i]))
+    return np.array(t), np.array(data)
 
-total_time = t[-1] - t[0]
-sample_rate = len(t) / total_time
-print("Sample rate:", sample_rate, "Hz")
+def get_fft(t, data):
+    # Find Sample Rates
+    total_time = t[-1] - t[0]
+    Fs = len(t) / total_time
+    print("Sample rate:", Fs, "Hz")
 
-# plot the CSV data
-plt.plot(t, data)
-plt.xlabel('Time [s]')
-plt.ylabel('Signal')
-plt.title('sigA Signal vs Time')
+    n = len(data) # Length of the signal
+    k = np.arange(n)
+    T = n/Fs 
+
+    frq = k/T
+    frq = frq[range(int(n/2))]
+
+    Y = np.fft.fft(data) / n
+    Y = Y[range(int(n/2))]
+
+    return frq, abs(Y), Fs
+
+filename = 'sigD.csv'
+t, data = read_csv(filename)
+
+frq, Y, Fs = get_fft(t, data)
+
+fig,(ax1, ax2) = plt.subplots(2,1)
+
+ax1.plot(t, data, 'k')
+ax1.set_xlabel('Time [s]')
+ax1.set_ylabel('Signal')
+ax1.set_title(filename + ' Signal vs Time')
+
+ax2.loglog(frq, Y, 'k')
+ax2.set_xlabel('Frequency [Hz]')
+ax2.set_ylabel('|Y(freq)|')
+ax2.set_title(filename + ' FFT')
+
+plt.tight_layout()
 plt.show()
 
+print("Sample rate:", Fs, "Hz")
